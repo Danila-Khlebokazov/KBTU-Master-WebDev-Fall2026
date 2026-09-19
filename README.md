@@ -3,6 +3,9 @@
 > [!NOTE]
 > This homework assignment is based on the previous one. That's why in the git log it looks just like a continuation.
 
+> [!TIP]
+> To see all works in this repository, please check the [master branch](../../tree/master).
+
 ### Homework task
 
 - Extend the application into a multi-container application.
