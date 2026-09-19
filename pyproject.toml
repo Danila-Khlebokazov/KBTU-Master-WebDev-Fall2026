@@ -8,8 +8,12 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.0",
     "fastapi>=0.141.1",
     "httptools>=0.8.0",
+    "psycopg[binary,pool]>3",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy[asyncio]>=2.0.54",
     "uvicorn>=0.53.0",
     "uvloop>=0.22.1",
 ]
