@@ -1,10 +1,10 @@
 ## HW2. Multi-Container Application with Docker Compose
 
-> [!NOTE]
-> This homework assignment is based on the previous one. That's why in the git log it looks just like a continuation.
-
 > [!TIP]
 > To see all works in this repository, please check the [master branch](../../tree/master).
+
+> [!NOTE]
+> This homework assignment is based on the previous one. That's why in the git log it looks just like a continuation.
 
 ### Homework task
 
