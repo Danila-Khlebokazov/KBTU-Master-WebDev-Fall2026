@@ -9,5 +9,14 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.141.1",
+    "httptools>=0.8.0",
+    "uvicorn>=0.53.0",
+    "uvloop>=0.22.1",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.2",
+    "ruff>=0.16.8",
 ]
 
