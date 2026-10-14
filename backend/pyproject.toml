@@ -1,0 +1,32 @@
+[project]
+name = "expense-tracker-api"
+version = "1.0.0"
+description = "Expense Tracker API"
+authors = [
+    { name = "Danila Khlebokazov", email = "danilik_2003@mail.ru" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.13",
+    "bcrypt>=4.2",
+    "email-validator>=2.2",
+    "fastapi>=0.115",
+    "psycopg[binary,pool]>=3.2",
+    "pydantic-settings>=2.6",
+    "pyjwt>=2.9",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "uvicorn[standard]>=0.32",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]
