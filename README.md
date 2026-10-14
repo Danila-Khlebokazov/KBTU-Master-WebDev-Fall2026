@@ -7,4 +7,5 @@
  - HW2 - branch [/hw2](../../tree/hw2)
  - HW3 - branch [/hw3](../../tree/hw3)
  - HW4 - branch [/hw4](../../tree/hw4)
- - Project - branch [/project](../../tree/project)
+ - Project Part 1 - branch [/project](../../tree/project_p1)
+ - Project Part 2 - branch [/project](../../tree/project_p2)
