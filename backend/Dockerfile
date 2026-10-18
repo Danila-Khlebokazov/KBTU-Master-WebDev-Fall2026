@@ -16,8 +16,7 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
-    APP_PORT=8000 
-# default env for application
+    APP_PORT=8000
 
 WORKDIR /app
 RUN useradd --create-home --uid 1000 appuser

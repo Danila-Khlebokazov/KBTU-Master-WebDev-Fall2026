@@ -140,7 +140,7 @@ Docker Compose reads these from `.env`. The defaults are in `docker-compose.yml`
 | `FRONTEND_PORT` | `8080` | compose | Host port for the UI |
 | `BACKEND_PORT` | `8000` | compose | Host port for the API |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `expenses` | db, backend | DB credentials |
-| `JWT_SECRET` | `dev-only-secret-change-me` | backend | Secret used to sign JWTs |
+| `JWT_SECRET` | `dev-only-secret` | backend | Secret used to sign JWTs |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | backend | Token lifetime |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `admin@example.com` / `admin12345` | backend | Seeded admin account |
 | `SEED_DEMO_DATA` | `true` | backend | Insert demo users and expenses on first start |
