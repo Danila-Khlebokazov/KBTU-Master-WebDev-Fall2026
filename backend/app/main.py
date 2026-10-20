@@ -122,6 +122,33 @@ for router in (auth.router, expenses.router, categories.router, users.router):
     app.include_router(router, prefix="/api")
 
 
+AUTH_NOTE = "**Authorization required:** `Authorization: Bearer <access_token>`."
+ADMIN_NOTE = "**Authorization required:** `Authorization: Bearer <access_token>` of a user " \
+    "with the `admin` role."
+
+
+def custom_openapi() -> dict:
+    """Mark every secured operation with an explicit auth note in summary and description."""
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = FastAPI.openapi(app)
+    for path_item in schema["paths"].values():
+        for operation in path_item.values():
+            if not operation.get("security"):
+                continue
+            is_admin = "403" in operation.get("responses", {})
+            note = ADMIN_NOTE if is_admin else AUTH_NOTE
+            description = operation.get("description", "")
+            operation["description"] = f"{note}\n\n{description}".strip()
+            prefix = "[Admin]" if is_admin else "[Auth]"
+            operation["summary"] = f"{prefix} {operation.get('summary', '')}".strip()
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = custom_openapi
+
+
 @app.get(
     "/api/health",
     tags=["Health"],

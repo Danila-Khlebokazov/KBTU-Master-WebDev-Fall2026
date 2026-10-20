@@ -200,18 +200,75 @@ Status codes:
 
 ### Postman
 
-Import `postman/ExpenseTracker.postman_collection.json` and run it with the **Collection Runner**. It has 34 requests with test assertions and walks the full flow:
+The collection `postman/ExpenseTracker.postman_collection.json` has 18 demo requests in two
+folders: **1. User** and **2. Admin**. It works with the seeded [demo accounts](#demo-accounts).
 
-1. Register and log in.
-2. Category CRUD.
-3. Expense CRUD.
-4. Admin user management.
-5. Permission checks: 401, 403 and 404.
-6. Log out and clean up.
+**Quick start**
 
-Variables (`baseUrl`, `adminEmail`, `adminPassword`) are set at the collection level.
+1. Start the stack: `docker compose up --build`. Wait until all services are `healthy`.
+2. In Postman, click **Import** and choose `postman/ExpenseTracker.postman_collection.json`.
+3. Open the folder **1. User** and send the requests **one by one, from top to bottom**.
+4. Then do the same in **2. Admin**.
 
-From the CLI:
+You can also run everything at once: right-click the collection, choose **Run collection**, then click **Run**.
+
+You never copy tokens or IDs by hand. The *Tests* script of each request saves them to
+collection variables, and the folder's **Authorization** tab sends `Bearer {{userToken}}`
+or `Bearer {{adminToken}}`. That is why the order matters: run **Login** first, and run the User folder before the Admin folder.
+
+**1. User** (demo user `aruzhan@example.com`)
+
+| # | Request | What it shows | Saves |
+|---|---|---|---|
+| 1 | `POST /auth/login` | Log in, get a JWT | `userToken` |
+| 2 | `GET /auth/me` | Current profile | `userId` |
+| 3 | `GET /categories` | Category list | `categoryId` (first one) |
+| 4 | `POST /expenses` | Create an expense | `expenseId` |
+| 5 | `GET /expenses?q=…&date_from=…` | Filters and pagination | |
+| 6 | `PUT /expenses/{{expenseId}}` | Update the expense | |
+| 7 | `GET /expenses/summary` | Totals by category | |
+| 8 | `POST /categories` → `403` | A user cannot do admin actions | |
+| 9 | `DELETE /expenses/{{expenseId}}` | Delete the expense (cleanup) | |
+| 10 | `POST /auth/logout` | Revoke the token | |
+
+**2. Admin** (`admin@example.com`)
+
+| # | Request | What it shows | Saves |
+|---|---|---|---|
+| 1 | `POST /auth/login` | Log in as admin | `adminToken` |
+| 2 | `GET /users` | All accounts | |
+| 3 | `GET /expenses?owner_id={{userId}}` | Admin sees another user's expenses | |
+| 4 | `POST /categories` | Create category "Coffee" | `newCategoryId` |
+| 5 | `PUT /categories/{{newCategoryId}}` | Rename / recolor | |
+| 6 | `DELETE /categories/{{newCategoryId}}` | Delete it (cleanup) | |
+| 7 | `PATCH /users/{{userId}}` | Partial user update | |
+| 8 | `POST /auth/logout` | Revoke the token | |
+
+Every request also has a short description in Postman: open the request and see the **Docs** pane on the right.
+
+**What you can change**
+
+- **Collection variables** (click the collection, then the **Variables** tab):
+  - `baseUrl`: `http://localhost:8080/api` goes through nginx; use `http://localhost:8000/api` to call the backend directly.
+  - `userEmail` / `userPassword`: any demo user (e.g. `timur@example.com` / `demo12345`) or your own registered account.
+  - `adminEmail` / `adminPassword`: must match `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- **Request bodies** (the **Body** tab):
+  - Expense: `title`, `amount` (> 0), `spent_on` (`YYYY-MM-DD`), `note`, `category_id` (an ID from `GET /categories` or `null`).
+  - Category: `name` (must be unique) and `color` (`#RRGGBB`).
+  - User (`PATCH`): `full_name`, `role` (`user`/`admin`), `is_active`.
+    Setting `is_active: false` blocks that user's login.
+- **Query params** (the **Params** tab): untick or edit the filters `q`, `date_from`, `date_to`, `owner_id`, `limit` and `offset`.
+
+Do **not** edit `userToken`, `adminToken`, `userId`, `categoryId`, `expenseId` or
+`newCategoryId`. They are filled automatically.
+
+**Common errors**
+
+- `401`: the token is missing, expired or revoked (for example after **Logout**). Send **Login** again.
+- `409` on *Create category*: a category with this name already exists, for example after an interrupted run. Change `name` or delete the old category.
+- `404` or `422` with an empty ID: you skipped a request that saves a variable. Run the folder from the top.
+
+From the CLI (runs both folders in order):
 
 ```bash
 npx newman run postman/ExpenseTracker.postman_collection.json

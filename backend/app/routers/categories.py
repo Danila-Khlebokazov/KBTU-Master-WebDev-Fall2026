@@ -50,7 +50,7 @@ async def get_category(category_id: CategoryId, _: CurrentUser, session: Session
     "",
     response_model=CategoryRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Create category (admin)",
+    summary="Create category",
     responses=FORBIDDEN | CONFLICT,
 )
 async def create_category(data: CategoryCreate, _: AdminUser, session: SessionDep) -> Category:
@@ -65,7 +65,7 @@ async def create_category(data: CategoryCreate, _: AdminUser, session: SessionDe
 @router.put(
     "/{category_id}",
     response_model=CategoryRead,
-    summary="Update category (admin)",
+    summary="Update category",
     responses=FORBIDDEN | NOT_FOUND | CONFLICT,
 )
 async def update_category(
@@ -83,7 +83,7 @@ async def update_category(
 @router.delete(
     "/{category_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete category (admin)",
+    summary="Delete category",
     responses=FORBIDDEN | NOT_FOUND,
 )
 async def delete_category(category_id: CategoryId, _: AdminUser, session: SessionDep) -> Response:

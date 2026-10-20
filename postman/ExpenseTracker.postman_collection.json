@@ -2,196 +2,82 @@
   "info": {
     "_postman_id": "90e91d2b-75f5-4b79-97ef-c6dca0eac7f1",
     "name": "Spendwise - Expense Tracker API",
-    "description": "Full flow for the Expense Tracker API. Run the whole collection with the Collection Runner (requests depend on variables saved by previous ones).\n\nDefault `baseUrl` goes through the nginx frontend proxy (http://localhost:8080/api). Use http://localhost:8000/api to call the backend container directly.\n\n`adminEmail` / `adminPassword` must match ADMIN_EMAIL / ADMIN_PASSWORD from .env.",
+    "description": "Demo requests for the Spendwise API, split into two folders:\n\n1. **User**: a regular user logs in, creates/updates/deletes an expense.\n2. **Admin**: the admin manages categories and users.\n\n**How to use:** start the stack (`docker compose up`), then open each folder and send requests **top to bottom**, or run the whole collection with the Collection Runner. Tokens and IDs are saved to collection variables automatically, you never copy them by hand.\n\n**Variables you may change** (collection → *Variables*): `baseUrl`, `userEmail`, `userPassword`, `adminEmail`, `adminPassword`. The rest are filled automatically.\n\nSee the *Postman* section of README.md for details.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080/api"
-    },
-    {
-      "key": "adminEmail",
-      "value": "admin@example.com"
-    },
-    {
-      "key": "adminPassword",
-      "value": "admin12345"
+      "value": "http://localhost:8080/api",
+      "description": "Use http://localhost:8000/api to call the backend directly"
     },
     {
       "key": "userEmail",
-      "value": ""
+      "value": "aruzhan@example.com",
+      "description": "Any demo user or your own account"
     },
     {
       "key": "userPassword",
-      "value": "secret123"
+      "value": "demo12345"
     },
     {
-      "key": "token",
-      "value": ""
+      "key": "adminEmail",
+      "value": "admin@example.com",
+      "description": "Must match ADMIN_EMAIL"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin12345",
+      "description": "Must match ADMIN_PASSWORD"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "description": "auto: Login as user"
     },
     {
       "key": "adminToken",
-      "value": ""
+      "value": "",
+      "description": "auto: Login as admin"
     },
     {
       "key": "userId",
-      "value": ""
+      "value": "",
+      "description": "auto: Who am I"
     },
     {
       "key": "categoryId",
-      "value": ""
+      "value": "",
+      "description": "auto: List categories"
     },
     {
       "key": "expenseId",
-      "value": ""
+      "value": "",
+      "description": "auto: Create expense"
+    },
+    {
+      "key": "newCategoryId",
+      "value": "",
+      "description": "auto: Create category"
     }
   ],
   "item": [
     {
-      "name": "Health",
+      "name": "1. User",
+      "description": "Flow of a regular user (demo account `{{userEmail}}`). Run requests **top to bottom**: `Login` saves `userToken`, `List categories` saves `categoryId`, `Create expense` saves `expenseId`; later requests use these variables.\n\nAll requests in this folder inherit `Bearer {{userToken}}` from the folder auth.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{userToken}}",
+            "type": "string"
+          }
+        ]
+      },
       "item": [
         {
-          "name": "Health check",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "health"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"DB ok\", () => pm.expect(pm.response.json().database).to.eql(\"ok\"));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "Register user",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"full_name\": \"Postman User\",\n  \"password\": \"{{userPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set(\"userEmail\", `user_${Date.now()}@example.com`);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
-                  "const u = pm.response.json();",
-                  "pm.test(\"Role is user\", () => pm.expect(u.role).to.eql(\"user\"));",
-                  "pm.test(\"No password in response\", () => pm.expect(u).to.not.have.property(\"hashed_password\"));",
-                  "pm.collectionVariables.set(\"userId\", u.id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Register duplicate email -> 409",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"full_name\": \"Dup\",\n  \"password\": \"{{userPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login with wrong password -> 401",
+          "name": "Login as user",
           "request": {
             "method": "POST",
             "header": [
@@ -210,51 +96,7 @@
                 "login"
               ]
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"wrong-password\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login user",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
+            "description": "Log in with `userEmail` / `userPassword` from the collection variables. The token is saved to `userToken` automatically.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
@@ -275,62 +117,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "const t = pm.response.json();",
-                  "pm.test(\"Bearer token returned\", () => pm.expect(t.token_type).to.eql(\"bearer\"));",
-                  "pm.collectionVariables.set(\"token\", t.access_token);"
+                  "pm.collectionVariables.set(\"userToken\", pm.response.json().access_token);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Login admin",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().access_token);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Current user (me)",
+          "name": "Who am I",
           "request": {
             "method": "GET",
             "header": [],
@@ -344,16 +138,7 @@
                 "me"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Profile of the token owner. Saves `userId` (used by the Admin folder)."
           },
           "event": [
             {
@@ -362,48 +147,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Email matches\", () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"userEmail\")));"
+                  "const me = pm.response.json();",
+                  "pm.test(\"Role is user\", () => pm.expect(me.role).to.eql(\"user\"));",
+                  "pm.collectionVariables.set(\"userId\", me.id);"
                 ]
               }
             }
           ]
         },
-        {
-          "name": "Me without token -> 401",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/auth/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "me"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Categories",
-      "item": [
         {
           "name": "List categories",
           "request": {
@@ -418,16 +169,7 @@
                 "categories"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Shared categories (read-only for users). The first one is saved to `categoryId` and used when creating an expense."
           },
           "event": [
             {
@@ -436,263 +178,12 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Is array\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                  "pm.collectionVariables.set(\"categoryId\", pm.response.json()[0].id);"
                 ]
               }
             }
           ]
         },
-        {
-          "name": "Create category (admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/categories",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "categories"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman {{$timestamp}}\",\n  \"color\": \"#14b8a6\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"categoryId\", pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Create category as user -> 403",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/categories",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "categories"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Forbidden\",\n  \"color\": \"#000000\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get category by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/categories/{{categoryId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "categories",
-                "{{categoryId}}"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update category (admin)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/categories/{{categoryId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "categories",
-                "{{categoryId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman updated {{$timestamp}}\",\n  \"color\": \"#f43f5e\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Color updated\", () => pm.expect(pm.response.json().color).to.eql(\"#f43f5e\"));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Invalid color -> 422",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/categories/{{categoryId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "categories",
-                "{{categoryId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Bad\",\n  \"color\": \"red\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 422\", () => pm.response.to.have.status(422));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Expenses",
-      "item": [
         {
           "name": "Create expense",
           "request": {
@@ -712,24 +203,15 @@
                 "expenses"
               ]
             },
+            "description": "Create an expense owned by the current user. Saves `expenseId`.\n\n**Editable:** `title` (1-200 chars), `amount` (> 0, KZT), `spent_on` (`YYYY-MM-DD`), `note` (optional), `category_id` (any ID from *List categories* or `null`).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Coffee\",\n  \"amount\": 1500,\n  \"spent_on\": \"2026-10-01\",\n  \"category_id\": {{categoryId}},\n  \"note\": \"Morning latte\"\n}",
+              "raw": "{\n  \"title\": \"Coffee with friends\",\n  \"amount\": 2500,\n  \"spent_on\": \"2026-10-15\",\n  \"note\": \"Created from Postman\",\n  \"category_id\": {{categoryId}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
             }
           },
           "event": [
@@ -739,73 +221,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
-                  "const e = pm.response.json();",
-                  "pm.collectionVariables.set(\"expenseId\", e.id);",
-                  "pm.test(\"Amount is numeric\", () => pm.expect(e.amount).to.eql(1500));",
-                  "pm.test(\"Category attached\", () => pm.expect(e.category.id).to.eql(Number(pm.collectionVariables.get(\"categoryId\"))));"
+                  "pm.collectionVariables.set(\"expenseId\", pm.response.json().id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create expense with negative amount -> 422",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/expenses",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "expenses"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Bad\",\n  \"amount\": -5,\n  \"spent_on\": \"2026-10-01\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 422\", () => pm.response.to.have.status(422));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "List expenses",
+          "name": "List my expenses (filters)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/expenses?limit=20&offset=0",
+              "raw": "{{baseUrl}}/expenses?q=coffee&date_from=2026-10-01&date_to=2026-10-31&limit=10&offset=0",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -814,121 +242,33 @@
               ],
               "query": [
                 {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
-                }
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "const d = pm.response.json();",
-                  "pm.test(\"Has items and total\", () => { pm.expect(d.items).to.be.an(\"array\"); pm.expect(d.total).to.be.at.least(1); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "List expenses filtered",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/expenses?category_id={{categoryId}}&date_from=2026-10-01&date_to=2026-10-31&q=coff",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "expenses"
-              ],
-              "query": [
-                {
-                  "key": "category_id",
-                  "value": "{{categoryId}}"
+                  "key": "q",
+                  "value": "coffee",
+                  "description": "Search in title (case-insensitive)"
                 },
                 {
                   "key": "date_from",
-                  "value": "2026-10-01"
+                  "value": "2026-10-01",
+                  "description": "From date, YYYY-MM-DD"
                 },
                 {
                   "key": "date_to",
-                  "value": "2026-10-31"
+                  "value": "2026-10-31",
+                  "description": "To date, YYYY-MM-DD"
                 },
                 {
-                  "key": "q",
-                  "value": "coff"
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Page size, 1-100"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Items to skip"
                 }
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Found 1\", () => pm.expect(pm.response.json().total).to.eql(1));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get expense by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "expenses",
-                "{{expenseId}}"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Only the current user's expenses, newest first. Every query param is optional: untick or change them in the **Params** tab."
           },
           "event": [
             {
@@ -962,24 +302,15 @@
                 "{{expenseId}}"
               ]
             },
+            "description": "Full replacement of the expense created above: send **all** fields. Same editable fields as *Create expense*.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Coffee & croissant\",\n  \"amount\": 2750.5,\n  \"spent_on\": \"2026-10-02\",\n  \"category_id\": {{categoryId}},\n  \"note\": null\n}",
+              "raw": "{\n  \"title\": \"Coffee and dessert\",\n  \"amount\": 3800,\n  \"spent_on\": \"2026-10-15\",\n  \"note\": \"Updated from Postman\",\n  \"category_id\": {{categoryId}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
             }
           },
           "event": [
@@ -989,7 +320,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Updated\", () => pm.expect(pm.response.json().amount).to.eql(2750.5));"
+                  "pm.test(\"Amount updated\", () => pm.expect(pm.response.json().amount).to.eql(3800));"
                 ]
               }
             }
@@ -1001,64 +332,28 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/expenses/summary",
+              "raw": "{{baseUrl}}/expenses/summary?date_from=2026-10-01&date_to=2026-10-31",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "expenses",
                 "summary"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Total > 0\", () => pm.expect(pm.response.json().total).to.be.above(0));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Admin can read user's expense",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
-              "host": [
-                "{{baseUrl}}"
               ],
-              "path": [
-                "expenses",
-                "{{expenseId}}"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+              "query": [
                 {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
+                  "key": "date_from",
+                  "value": "2026-10-01",
+                  "description": "From date"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-10-31",
+                  "description": "To date"
                 }
               ]
-            }
+            },
+            "description": "Totals per category for the period (remove the params for all time)."
           },
           "event": [
             {
@@ -1073,22 +368,33 @@
           ]
         },
         {
-          "name": "Get expense without token -> 401",
+          "name": "Create category -> 403 (admin only)",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
+              "raw": "{{baseUrl}}/categories",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "expenses",
-                "{{expenseId}}"
+                "categories"
               ]
             },
-            "auth": {
-              "type": "noauth"
+            "description": "Role check: a regular user cannot create categories, the API answers `403`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Not allowed\",\n  \"color\": \"#000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -1097,7 +403,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));"
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -1118,16 +424,7 @@
                 "{{expenseId}}"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Delete the expense created above, so the demo data stays clean. Returns `204`."
           },
           "event": [
             {
@@ -1142,30 +439,21 @@
           ]
         },
         {
-          "name": "Get deleted expense -> 404",
+          "name": "Logout",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
+              "raw": "{{baseUrl}}/auth/logout",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "expenses",
-                "{{expenseId}}"
+                "auth",
+                "logout"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Revoke `userToken` on the server. Any further request with it returns `401`; run *Login as user* again to get a new one."
           },
           "event": [
             {
@@ -1173,7 +461,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));"
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -1182,8 +470,66 @@
       ]
     },
     {
-      "name": "Users (admin)",
+      "name": "2. Admin",
+      "description": "Flow of the administrator (`{{adminEmail}}`). Run **after** the User folder (it needs `userId`). Run requests top to bottom: `Login` saves `adminToken`, `Create category` saves `newCategoryId`.\n\nAll requests in this folder inherit `Bearer {{adminToken}}` from the folder auth.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
+      },
       "item": [
+        {
+          "name": "Login as admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Log in with `adminEmail` / `adminPassword`. They must match `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`. The token is saved to `adminToken`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "List users",
           "request": {
@@ -1198,15 +544,88 @@
                 "users"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+            "description": "All registered accounts (admin only)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expenses of one user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/expenses?owner_id={{userId}}&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ],
+              "query": [
                 {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
+                  "key": "owner_id",
+                  "value": "{{userId}}",
+                  "description": "User ID (admin only)"
+                },
+                {
+                  "key": "limit",
+                  "value": "5",
+                  "description": "Page size, 1-100"
                 }
               ]
+            },
+            "description": "Admins see everyone's expenses. `owner_id` narrows the list to one user (`userId` was saved by *Who am I* in the User folder). Remove it to see all users."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "Create a shared category. Saves `newCategoryId`.\n\n**Editable:** `name` (unique, case-insensitive; `409` if it exists), `color` (`#RRGGBB`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coffee\",\n  \"color\": \"#8b5cf6\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -1215,74 +634,42 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Is array\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"newCategoryId\", pm.response.json().id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "List users as user -> 403",
+          "name": "Update category",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));"
-                ]
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
-            }
-          ]
-        },
-        {
-          "name": "Get user by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
+            ],
             "url": {
-              "raw": "{{baseUrl}}/users/{{userId}}",
+              "raw": "{{baseUrl}}/categories/{{newCategoryId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "users",
-                "{{userId}}"
+                "categories",
+                "{{newCategoryId}}"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
+            "description": "Rename / recolor the category created above. Send both `name` and `color`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coffee & Snacks\",\n  \"color\": \"#f59e0b\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              ]
+              }
             }
           },
           "event": [
@@ -1292,6 +679,35 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{newCategoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{newCategoryId}}"
+              ]
+            },
+            "description": "Delete the category created above. Expenses in it would become uncategorized. Returns `204`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
                 ]
               }
             }
@@ -1317,68 +733,15 @@
                 "{{userId}}"
               ]
             },
+            "description": "Partial update: send only the fields to change.\n\n**Editable:** `full_name`, `role` (`user` / `admin`), `is_active` (`false` blocks login). The example keeps the demo user as is.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Renamed by admin\"\n}",
+              "raw": "{\n  \"full_name\": \"Aruzhan Nurlanovna\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Renamed\", () => pm.expect(pm.response.json().full_name).to.eql(\"Renamed by admin\"));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Logout & cleanup",
-      "item": [
-        {
-          "name": "Logout user",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/auth/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "logout"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
             }
           },
           "event": [
@@ -1394,121 +757,7 @@
           ]
         },
         {
-          "name": "Me after logout -> 401",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/auth/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "me"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Delete category (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/categories/{{categoryId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "categories",
-                "{{categoryId}}"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Delete user (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{userId}}"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Logout admin",
+          "name": "Logout",
           "request": {
             "method": "POST",
             "header": [],
@@ -1522,16 +771,7 @@
                 "logout"
               ]
             },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Revoke `adminToken`."
           },
           "event": [
             {
