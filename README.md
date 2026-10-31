@@ -8,4 +8,5 @@
  - HW3 - branch [/hw3](../../tree/hw3)
  - HW4 - branch [/hw4](../../tree/hw4)
  - Project Part 1 - branch [/project_p1](../../tree/project_p1)
+ - Midterm Task - branch [/midterm_task](../../tree/midterm_task)
  - Project Part 2 - branch [/project_p2](../../tree/project_p2)
