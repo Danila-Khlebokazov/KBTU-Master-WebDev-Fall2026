@@ -1,0 +1,179 @@
+{
+  "info": {
+    "name": "Space Bounty Hunters API",
+    "description": "Midterm: wanted criminals listing/filtering/sorting/details and HuntLog CRUD. Run `docker compose up -d --build` first.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "huntId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Criminals",
+      "item": [
+        {
+          "name": "List all criminals",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('at least 5 criminals', () => pm.expect(pm.response.json().length).to.be.at.least(5));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/" }
+        },
+        {
+          "name": "Filter + sort: min_reward=5000&armed=true&sort=-reward",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "var data = pm.response.json();",
+            "pm.test('all armed with reward >= 5000', () => data.forEach(c => { pm.expect(c.armed).to.be.true; pm.expect(Number(c.reward)).to.be.at.least(5000); }));",
+            "pm.test('sorted by reward desc', () => { for (let i = 1; i < data.length; i++) pm.expect(Number(data[i-1].reward)).to.be.at.least(Number(data[i].reward)); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/?min_reward=5000&armed=true&sort=-reward" }
+        },
+        {
+          "name": "Filter: max_reward=5000&has_crew=true",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.response.json().forEach(c => { pm.expect(c.has_crew).to.be.true; pm.expect(Number(c.reward)).to.be.at.most(5000); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/?max_reward=5000&has_crew=true" }
+        },
+        {
+          "name": "Filter: escape_master=true, sort=reward",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "var data = pm.response.json();",
+            "data.forEach(c => pm.expect(c.escape_master).to.be.true);",
+            "pm.test('sorted by reward asc', () => { for (let i = 1; i < data.length; i++) pm.expect(Number(data[i-1].reward)).to.be.at.most(Number(data[i].reward)); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/?escape_master=true&sort=reward" }
+        },
+        {
+          "name": "Criminal details (id=1)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('has hunts list', () => pm.expect(pm.response.json().hunts).to.be.an('array'));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/1/" }
+        },
+        {
+          "name": "INVALID: criminal not found (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/99999/" }
+        },
+        {
+          "name": "INVALID: bad sort value (422)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('422 Unprocessable', () => pm.response.to.have.status(422));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/criminals/?sort=name" }
+        }
+      ]
+    },
+    {
+      "name": "2. Hunt logs",
+      "item": [
+        {
+          "name": "List all hunt logs",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('at least 10 logs', () => pm.expect(pm.response.json().length).to.be.at.least(10));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/hunts/" }
+        },
+        {
+          "name": "Filter hunt logs by criminal_id=3",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.response.json().forEach(h => pm.expect(h.criminal_id).to.eql(3));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/hunts/?criminal_id=3" }
+        },
+        {
+          "name": "Create hunt log",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "var body = pm.response.json();",
+            "pm.test('created_at set by server', () => pm.expect(body.created_at).to.be.a('string'));",
+            "pm.collectionVariables.set('huntId', body.id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"criminal_id\": 3,\n  \"success\": false,\n  \"notes\": \"Target escaped through an asteroid field.\"\n}" },
+            "url": "{{baseUrl}}/hunts/"
+          }
+        },
+        {
+          "name": "Get created hunt log",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('same id', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('huntId'))));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/hunts/{{huntId}}/" }
+        },
+        {
+          "name": "Update hunt log (PATCH)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "var body = pm.response.json();",
+            "pm.test('updated', () => { pm.expect(body.success).to.be.true; pm.expect(body.notes).to.include('Captured'); });"
+          ] } }],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"success\": true,\n  \"notes\": \"Captured on the second attempt.\"\n}" },
+            "url": "{{baseUrl}}/hunts/{{huntId}}/"
+          }
+        },
+        {
+          "name": "Delete hunt log",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+          ] } }],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/hunts/{{huntId}}/" }
+        },
+        {
+          "name": "INVALID: get deleted hunt log (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/hunts/{{huntId}}/" }
+        },
+        {
+          "name": "INVALID: create with non-existent criminal (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"criminal_id\": 99999,\n  \"success\": false,\n  \"notes\": \"Ghost target.\"\n}" },
+            "url": "{{baseUrl}}/hunts/"
+          }
+        },
+        {
+          "name": "INVALID: create with missing fields / client created_at (422)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('422 Unprocessable', () => pm.response.to.have.status(422));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"criminal_id\": 1,\n  \"created_at\": \"2020-01-01T00:00:00Z\"\n}" },
+            "url": "{{baseUrl}}/hunts/"
+          }
+        },
+        {
+          "name": "INVALID: non-integer id (422)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('422 Unprocessable', () => pm.response.to.have.status(422));"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/hunts/abc/" }
+        }
+      ]
+    }
+  ]
+}

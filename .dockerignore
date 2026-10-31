@@ -6,3 +6,11 @@
 .pytest_cache
 Dockerfile
 .dockerignore
+.git
+.idea
+.DS_Store
+*.zip
+postman
+README.md
+docker-compose.yml
+.env.example
