@@ -1,5 +1,8 @@
 # Space Bounty Hunters API
 
+> [!TIP]
+> To see all works in this repository, please check the [master branch](../../tree/master).
+
 Midterm practical assignment (Web Development, KBTU). REST API for space bounty hunters:
 a database of wanted criminals and a journal of bounty-hunting attempts.
 
@@ -19,17 +22,6 @@ On startup the backend container:
 2. prefills the database (if empty) with **6 criminals** and **11 hunt logs** ([app/seed.py](app/seed.py)).
 
 Reset the database: `docker compose down -v && docker compose up -d --build`.
-
-### Without Docker
-
-Requires a running PostgreSQL and [uv](https://docs.astral.sh/uv/).
-
-```bash
-export POSTGRES_HOST=localhost POSTGRES_USER=bounty POSTGRES_PASSWORD=bounty POSTGRES_DB=bounty
-uv sync
-uv run alembic upgrade head
-uv run uvicorn app.main:app --port 8000
-```
 
 ## Models
 
@@ -94,9 +86,3 @@ POST body:
 Import [postman/BountyHunters.postman_collection.json](postman/BountyHunters.postman_collection.json)
 (variable `baseUrl` = `http://localhost:8000/api`). It covers listing, filtering, sorting,
 details, hunt log CRUD and invalid requests, each with tests.
-
-Run from CLI:
-
-```bash
-npx -y newman run postman/BountyHunters.postman_collection.json
-```
