@@ -79,6 +79,9 @@ uv sync --no-dev
 alembic upgrade head
 ```
 
+`alembic upgrade head` also seeds demo data ([alembic/versions/7c1e5d8f2a90_seed_demo_data.py](alembic/versions/7c1e5d8f2a90_seed_demo_data.py)):
+**12 users, 15 projects, 150 tasks** (users have `@demo.example.com` emails). Remove it with `alembic downgrade -1`.
+
 3. Run the application:
 
 ```bash
