@@ -1,15 +1,25 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel
-from sqlalchemy import String
+from fastapi import Depends, HTTPException, status
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from starlette.requests import Request
 
 
@@ -25,19 +35,70 @@ class User(Base):
         String(255), unique=True, index=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    projects: Mapped[list["Project"]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan", passive_deletes=True
+    )
+    assigned_tasks: Mapped[list["Task"]] = relationship(
+        back_populates="assignee", passive_deletes=True
+    )
 
 
-class UserModel(BaseModel):
-    email: str
-    name: str
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    owner: Mapped[User] = relationship(back_populates="projects")
+    tasks: Mapped[list["Task"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
-class UserCreateModel(UserModel):
-    pass
+class Task(Base):
+    __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint("priority BETWEEN 1 AND 5", name="ck_tasks_priority"),
+        CheckConstraint(
+            "status IN ('todo', 'in_progress', 'done')", name="ck_tasks_status"
+        ),
+    )
 
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="todo")
+    priority: Mapped[int] = mapped_column(nullable=False, default=3)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    assignee_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
-class UserInfoModel(UserModel):
-    id: int
+    project: Mapped[Project] = relationship(back_populates="tasks")
+    assignee: Mapped[User | None] = relationship(back_populates="assigned_tasks")
 
 
 class DBManager:
@@ -74,3 +135,25 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
     db: DBManager = request.state.db_manager
     async with db.session() as session:
         yield session
+
+
+DBSession = Annotated[AsyncSession, Depends(get_db_session)]
+
+
+async def get_or_404[T](
+    session: AsyncSession, model: type[T], obj_id: int, name: str
+) -> T:
+    obj = await session.get(model, obj_id)
+    if obj is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{name} {obj_id} not found")
+    return obj
+
+
+async def ensure_exists(
+    session: AsyncSession, model: type[Base], obj_id: int, name: str
+) -> None:
+    """Validate a foreign key from a request body (422 instead of 404)."""
+    if await session.get(model, obj_id) is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, f"{name} {obj_id} does not exist"
+        )
