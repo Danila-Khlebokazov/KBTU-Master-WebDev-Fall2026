@@ -15,4 +15,5 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["python", "src/main.py"]
+# Apply migrations (incl. demo seed data) and start the API
+CMD ["sh", "-c", "alembic upgrade head && exec python src/main.py"]

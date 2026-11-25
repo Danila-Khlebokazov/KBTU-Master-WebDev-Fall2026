@@ -28,8 +28,9 @@ target_metadata = Base.metadata
 
 from src.settings import get_settings
 
+# POSTGRES_HOST comes from .env ("db" inside Docker Compose).
+# To migrate from the host machine run: POSTGRES_HOST=localhost alembic upgrade head
 settings = get_settings()
-settings.POSTGRES_HOST = "localhost"
 config.set_main_option("sqlalchemy.url", settings.POSTGRES_URL)
 
 

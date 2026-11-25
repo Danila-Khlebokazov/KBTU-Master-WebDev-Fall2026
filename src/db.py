@@ -6,13 +6,16 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import (
     CheckConstraint,
+    Column,
     Date,
     DateTime,
     ForeignKey,
     String,
+    Table,
     Text,
     func,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -27,16 +30,44 @@ class Base(DeclarativeBase):
     pass
 
 
+task_tags = Table(
+    "task_tags",
+    Base.metadata,
+    Column("task_id", ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "tag_id",
+        ForeignKey("tags.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
+    ),
+)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
     email: Mapped[str] = mapped_column(
         String(255), unique=True, index=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Bumped on password change so that all previously issued JWTs become invalid
+    token_version: Mapped[int] = mapped_column(
+        nullable=False, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    profile: Mapped["Profile | None"] = relationship(
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     projects: Mapped[list["Project"]] = relationship(
@@ -44,6 +75,43 @@ class User(Base):
     )
     assigned_tasks: Mapped[list["Task"]] = relationship(
         back_populates="assignee", passive_deletes=True
+    )
+
+
+class Profile(Base):
+    """One-to-one extension of User (shares the user's primary key)."""
+
+    __tablename__ = "profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    job_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    website: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship(back_populates="profile")
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    color: Mapped[str] = mapped_column(String(7), nullable=False, default="#6b7280")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    tasks: Mapped[list["Task"]] = relationship(
+        secondary=task_tags, back_populates="tags", passive_deletes=True
     )
 
 
@@ -99,6 +167,13 @@ class Task(Base):
 
     project: Mapped[Project] = relationship(back_populates="tasks")
     assignee: Mapped[User | None] = relationship(back_populates="assigned_tasks")
+    tags: Mapped[list[Tag]] = relationship(
+        secondary=task_tags,
+        back_populates="tasks",
+        lazy="selectin",
+        order_by=Tag.name,
+        passive_deletes=True,
+    )
 
 
 class DBManager:
@@ -157,3 +232,12 @@ async def ensure_exists(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, f"{name} {obj_id} does not exist"
         )
+
+
+async def commit_or_409(session: AsyncSession, detail: str) -> None:
+    """Commit, translating unique-constraint violations into 409 Conflict."""
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, detail) from None

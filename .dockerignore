@@ -1,5 +1,10 @@
 .idea
 .venv
-.env.env
+.env
+.git
 */__pycache__
 .pre-commit-config.yaml
+frontend
+postman
+imgs
+app

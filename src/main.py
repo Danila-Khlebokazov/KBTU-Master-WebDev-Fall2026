@@ -2,10 +2,11 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
 from db import DBManager
-from routers import projects, tasks, users
+from routers import auth, me, projects, tags, tasks, users
 from settings import get_settings
 
 settings = get_settings()
@@ -25,12 +26,26 @@ async def lifespan(app: FastAPI):
 
 simple_app = FastAPI(
     title="Task Tracker API",
-    description="HW3: REST API with Users, Projects and Tasks",
+    description=(
+        "HW4: Users, Profiles, Projects, Tasks and Tags with JWT authentication. "
+        "GET endpoints are public; POST/PUT/PATCH/DELETE require "
+        "`Authorization: Bearer <access_token>` (obtain it via `/auth/login`)."
+    ),
     lifespan=lifespan,
 )
+simple_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+simple_app.include_router(auth.router)
+simple_app.include_router(me.router)
 simple_app.include_router(users.router)
 simple_app.include_router(projects.router)
 simple_app.include_router(tasks.router)
+simple_app.include_router(tags.router)
 
 
 @simple_app.get("/health", tags=["health"])
